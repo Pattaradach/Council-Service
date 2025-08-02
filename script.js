@@ -24,14 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
         'กานต์พิชา บุญรักษ์': { role: 'secretary', password: '01234' },
     };
 
-    // กำหนดหน้าที่เริ่มต้นสำหรับนักเรียนที่ไม่ได้ลงทะเบียน
+    reports: JSON.parse(sessionStorage.getItem('server_reports')) || [],
+        duties: JSON.parse(sessionStorage.getItem('server_duties')) || {},
+    };
+
+    const saveToServer = () => {
+        sessionStorage.setItem('server_reports', JSON.stringify(mockServer.reports));
+        sessionStorage.setItem('server_duties', JSON.stringify(mockServer.duties));
+    };
+
+    const allUsers = mockServer.users;
     const defaultStudentDuties = { tasks: ['ทำเวรประจำวันตามที่ได้รับมอบหมาย', 'รักษาความสะอาดห้องเรียน'] };
-
-    // โหลดข้อมูลหน้าที่จาก localStorage ถ้าไม่มีให้สร้างเป็น object ว่าง
-    let dutiesData = JSON.parse(localStorage.getItem('duties')) || {};
-
-    // จำลองฐานข้อมูลสำหรับเก็บรายงาน (ใช้ LocalStorage)
-    const reports = JSON.parse(localStorage.getItem('reports')) || [];
 
     // --- ส่วนการจัดการหน้า Login ---
     const loginForm = document.getElementById('login-form');
@@ -162,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listeners สำหรับปุ่มใหม่
     let isUserView = false;
     let isDutiesView = false;
 
@@ -216,10 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const showDutiesAssignmentBtn = document.getElementById('show-duties-assignment-btn');
         const adminContentView = document.getElementById('admin-content-view');
 
-        // แสดงหน้าดูรายงานเป็นค่าเริ่มต้น
         renderReportsTable(adminContentView);
 
-        // Event listeners สำหรับปุ่ม Admin view
         showReportsBtn.addEventListener('click', () => {
             renderReportsTable(adminContentView);
         });
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </table>
         `;
         const tableBody = container.querySelector('.report-table tbody');
-        reports.forEach(report => {
+        mockServer.reports.forEach(report => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${report.username}</td>
@@ -262,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ฟังก์ชันสำหรับสร้างหน้ามอบหมายหน้าที่
     function renderAdminDutiesAssignment(container) {
-        // สร้างตัวเลือกผู้ใช้ทั้งหมด (รวมนักเรียน)
         const allUsernames = Object.keys(allUsers);
         const userOptions = allUsernames.map(username => 
             `<option value="${username}">${username} (${allUsers[username].role})</option>`
@@ -296,10 +295,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusMessage = document.getElementById('assign-duties-status');
         const currentDutiesList = document.getElementById('current-duties-list');
 
-        // แสดงหน้าที่ที่มอบหมายอยู่
-        for (const user in dutiesData) {
+        for (const user in mockServer.duties) {
             const dutyItem = document.createElement('li');
-            dutyItem.innerHTML = `<strong>${user}:</strong> ${dutiesData[user].tasks.join(', ')}`;
+            dutyItem.innerHTML = `<strong>${user}:</strong> ${mockServer.duties[user].tasks.join(', ')}`;
             currentDutiesList.appendChild(dutyItem);
         }
 
@@ -310,8 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const newDuties = dutiesText.split(',').map(item => item.trim()).filter(item => item !== '');
 
             if (selectedUser && newDuties.length > 0) {
-                dutiesData[selectedUser] = { tasks: newDuties };
-                localStorage.setItem('duties', JSON.stringify(dutiesData));
+                mockServer.duties[selectedUser] = { tasks: newDuties };
+                saveToServer(); // บันทึกข้อมูลไปที่เซิร์ฟเวอร์จำลอง
                 statusMessage.textContent = `มอบหมายหน้าที่ให้ ${selectedUser} เรียบร้อยแล้ว!`;
                 statusMessage.style.color = 'green';
                 form.reset();
@@ -328,9 +326,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const username = loggedInUser.username;
         let userDuties;
         if (loggedInUser.role === 'student') {
-            userDuties = dutiesData[username] || defaultStudentDuties;
+            userDuties = mockServer.duties[username] || defaultStudentDuties;
         } else {
-            userDuties = dutiesData[username] || { tasks: ['ไม่มีหน้าที่ที่ได้รับมอบหมาย'] };
+            userDuties = mockServer.duties[username] || { tasks: ['ไม่มีหน้าที่ที่ได้รับมอบหมาย'] };
         }
         
         let dutiesList = userDuties.tasks.map(task => `<li>${task}</li>`).join('');
@@ -434,8 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
             image: imageUrl,
             timestamp: new Date().toLocaleString()
         };
-        reports.push(newReport);
-        localStorage.setItem('reports', JSON.stringify(reports));
+        mockServer.reports.push(newReport);
+        saveToServer();
         alert('ส่งข้อมูลเรียบร้อยแล้ว!');
         document.getElementById('report-form').reset();
     }
