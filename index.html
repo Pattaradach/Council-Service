@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>เข้าสู่ระบบ</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="user-role">ตำแหน่ง</label>
+                    <select id="user-role" required>
+                        <option value="">-- เลือกตำแหน่ง --</option>
+                        <option value="admin">ประธานนักเรียน</option>
+                        <option value="vice_admin">รองประธานนักเรียน</option>
+                        <option value="secretary">เลขานุการ</option>
+                        <option value="user">ประธานฝ่าย</option>
+                        <option value="student_council">กรรมการสภานักเรียน</option>
+                        <option value="student">นักเรียน</option>
+                    </select>
+                </div>
+
+                <div id="fixed-username-group" class="input-group" style="display: none;">
+                    <label for="username-select">ชื่อผู้ใช้งาน</label>
+                    <select id="username-select"></select>
+                </div>
+                
+                <div id="student-username-group" class="input-group" style="display: none;">
+                    <label for="student-username-input">ชื่อผู้ใช้งาน</label>
+                    <input type="text" id="student-username-input">
+                </div>
+
+                <div id="password-group" class="input-group" style="display: none;">
+                    <label for="password">รหัสผ่าน</label>
+                    <input type="password" id="password">
+                </div>
+                
+                <button type="submit" class="btn">เข้าสู่ระบบ</button>
+                <p id="error-message" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
