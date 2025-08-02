@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'กานต์พิชา บุญรักษ์': { role: 'secretary', password: '01234' },
     };
 
-     // กำหนดหน้าที่เริ่มต้นสำหรับนักเรียนที่ไม่ได้ลงทะเบียน
+    // กำหนดหน้าที่เริ่มต้นสำหรับนักเรียนที่ไม่ได้ลงทะเบียน
     const defaultStudentDuties = { tasks: ['ทำเวรประจำวันตามที่ได้รับมอบหมาย', 'รักษาความสะอาดห้องเรียน'] };
 
     // โหลดข้อมูลหน้าที่จาก localStorage ถ้าไม่มีให้สร้างเป็น object ว่าง
@@ -265,10 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // สร้างตัวเลือกผู้ใช้ทั้งหมด (รวมนักเรียน)
         const allUsernames = Object.keys(allUsers);
         const userOptions = allUsernames.map(username => 
-            `<option value="${username}">${username} (${allUsers[username] ? allUsers[username].role : 'student'})</option>`
+            `<option value="${username}">${username} (${allUsers[username].role})</option>`
         ).join('');
-        // เพิ่มตัวเลือก "นักเรียน" แยกต่างหากเพื่อรองรับนักเรียนที่ไม่ได้ลงทะเบียน
-        const studentOption = '<option value="นักเรียน">นักเรียน (ไม่ระบุชื่อ)</option>';
 
         container.innerHTML = `
             <div class="admin-duties-assignment">
@@ -279,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <select id="assign-user" required>
                             <option value="">-- เลือกผู้ใช้ --</option>
                             ${userOptions}
-                            ${studentOption}
                         </select>
                     </div>
                     <div class="input-group">
