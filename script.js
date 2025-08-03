@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- เปลี่ยน API Base URL เป็น Web App URL ของคุณ ---
-    const API_BASE_URL = 'https://script.google.com/d/1eB944n99EBcW-zDRPCA7Pouc8GkpwsaT2eDZlytgt3wFwVnS1MygbIEk/edit?usp=sharing'; // แทนที่ด้วย Web App URL ของคุณ{
+    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby1y6Wc3pxdmFf2OjKQtgYPqmlM_tQfijB4t_g_CNqcpNP1OnmJMKOunKG38fPTIzh3-g/exec'; // แทนที่ด้วย Web App URL ของคุณ{
     // User and role data
     const allUsers = {
     'ภัทราวุธ สังข์มัน': { role: 'user', password: 'Don1234' },
@@ -443,3 +443,4 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('report-form').reset();
     }
 });
+
