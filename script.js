@@ -1,9 +1,25 @@
-document.addEventListener('DOMContentLoaded', () => {
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-    // --- เปลี่ยน API Base URL เป็น Web App URL ของคุณ ---
-    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby1y6Wc3pxdmFf2OjKQtgYPqmlM_tQfijB4t_g_CNqcpNP1OnmJMKOunKG38fPTIzh3-g/exec'; // แทนที่ด้วย Web App URL ของคุณ{
-    // User and role data
-    const allUsers = {
+// TODO: Replace the following with your app's Firebase project configuration
+// *** ให้แทนที่โค้ด firebaseConfig ด้านล่างนี้ด้วยโค้ดที่คุณได้จาก Firebase Console ***
+const firebaseConfig = {
+    apiKey: "AIzaSyDIbLfo6zww5ReJZf_m78qfA7NIAxE5zC0",
+    authDomain: "myapp-f54ce.firebaseapp.com",
+    projectId: "myapp-f54ce",
+    storageBucket: "myapp-f54ce.firebasestorage.app",
+    messagingSenderId: "991770731305",
+    appId: "1:991770731305:web:8204c50052d4c0f1e58d38",
+    measurementId: "G-EFCJ9RJN9D"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// --- Mock User Data (ข้อมูลผู้ใช้ยังคงเก็บในไฟล์นี้) ---
+const allUsers = {
     'ภัทราวุธ สังข์มัน': { role: 'user', password: 'Don1234' },
         'ณัฐชญา พันธุรัตน์': { role: 'user', password: 'Namtal1234' },
         'ชัยภัทร สุขสัยญาติ': { role: 'user', password: 'Tae1234' },
@@ -25,105 +41,78 @@ document.addEventListener('DOMContentLoaded', () => {
         'ศุภสุตา ไกรทอง': { role: 'vice_admin', password: '121212' },
         'สมิทธ์ โสตเมต': { role: 'vice_admin', password: '121212' },
         'กานต์พิชา บุญรักษ์': { role: 'secretary', password: '01234' },
+};
+const defaultStudentDuties = { tasks: ['ทำเวรประจำวันตามที่ได้รับมอบหมาย', 'รักษาความสะอาดห้องเรียน'] };
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Firebase Functions ---
+    // Function to fetch all reports from Firebase
+    const getReports = async () => {
+        try {
+            const snapshot = await get(ref(database, 'reports'));
+            if (snapshot.exists()) {
+                return Object.values(snapshot.val());
+            }
+            return [];
+        } catch (error) {
+            console.error("Error fetching reports:", error);
+            return [];
+        }
     };
 
-    // กำหนดหน้าที่เริ่มต้นสำหรับนักเรียนที่ไม่ได้ลงทะเบียน
-    const defaultStudentDuties = { tasks: ['ทำเวรประจำวันตามที่ได้รับมอบหมาย', 'รักษาความสะอาดห้องเรียน'] };
+    // Function to fetch all duties from Firebase
+    const getDuties = async () => {
+        try {
+            const snapshot = await get(ref(database, 'duties'));
+            if (snapshot.exists()) {
+                return snapshot.val();
+            }
+            return {};
+        } catch (error) {
+            console.error("Error fetching duties:", error);
+            return {};
+        }
+    };
 
-    // โหลดข้อมูลหน้าที่จาก localStorage ถ้าไม่มีให้สร้างเป็น object ว่าง
-    let dutiesData = JSON.parse(localStorage.getItem('duties')) || {};
+    // Function to save a new report to Firebase
+    const saveReport = async (newReport) => {
+        try {
+            const reportsRef = ref(database, 'reports');
+            await push(reportsRef, newReport);
+        } catch (error) {
+            console.error("Error saving report:", error);
+        }
+    };
 
-    // จำลองฐานข้อมูลสำหรับเก็บรายงาน (ใช้ LocalStorage)
-    const reports = JSON.parse(localStorage.getItem('reports')) || [];
+    // Function to save duties to Firebase
+    const saveDuties = async (dutiesData) => {
+        try {
+            const dutiesRef = ref(database, 'duties');
+            await set(dutiesRef, dutiesData);
+        } catch (error) {
+            console.error("Error saving duties:", error);
+        }
+    };
 
-    // --- ส่วนการจัดการหน้า Login ---
+    // --- Login Logic ---
     const loginForm = document.getElementById('login-form');
-    const userRoleSelect = document.getElementById('user-role');
-    const fixedUsernameGroup = document.getElementById('fixed-username-group');
-    const usernameSelect = document.getElementById('username-select');
-    const studentUsernameGroup = document.getElementById('student-username-group');
-    const studentUsernameInput = document.getElementById('student-username-input');
-    const passwordGroup = document.getElementById('password-group');
-    const passwordInput = document.getElementById('password');
-
-    if (userRoleSelect) {
-        userRoleSelect.addEventListener('change', () => {
-            const role = userRoleSelect.value;
-            fixedUsernameGroup.style.display = 'none';
-            studentUsernameGroup.style.display = 'none';
-            passwordGroup.style.display = 'none';
-            usernameSelect.required = false;
-            studentUsernameInput.required = false;
-            passwordInput.required = false;
-
-            if (role === 'student') {
-                studentUsernameGroup.style.display = 'block';
-                studentUsernameInput.required = true;
-            } else if (role !== '') {
-                fixedUsernameGroup.style.display = 'block';
-                usernameSelect.required = true;
-                usernameSelect.innerHTML = '<option value="">-- เลือกชื่อของคุณ --</option>';
-                for (const username in allUsers) {
-                    if (allUsers[username].role === role) {
-                        const option = document.createElement('option');
-                        option.value = username;
-                        option.textContent = username;
-                        usernameSelect.appendChild(option);
-                    }
-                }
-            }
-
-            if (['admin', 'vice_admin', 'secretary', 'student_council', 'user'].includes(role)) {
-                passwordGroup.style.display = 'block';
-                passwordInput.required = true;
-            }
-        });
-    }
-
     if (loginForm) {
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const role = userRoleSelect.value;
-            const password = passwordInput.value;
-            const errorMessage = document.getElementById('error-message');
-            let username;
-
-            if (role === 'student') {
-                username = studentUsernameInput.value.trim();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (allUsers[username] && allUsers[username].password === password) {
+                const loggedInUser = { username: username, role: allUsers[username].role };
+                sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+                window.location.href = 'dashboard.html';
             } else {
-                username = usernameSelect.value;
-            }
-
-            const user = allUsers[username];
-            if (role === 'student') {
-                if (username !== '') {
-                    sessionStorage.setItem('loggedInUser', JSON.stringify({ username: username, role: role }));
-                    window.location.href = 'dashboard.html';
-                } else {
-                    errorMessage.textContent = 'กรุณาใส่ชื่อของคุณ';
-                    errorMessage.style.display = 'block';
-                }
-            } else if (user && user.role === role) {
-                if (['admin', 'vice_admin', 'secretary', 'student_council', 'user'].includes(role)) {
-                    if (user.password === password) {
-                        sessionStorage.setItem('loggedInUser', JSON.stringify({ username: username, role: role }));
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        errorMessage.textContent = 'รหัสผ่านไม่ถูกต้อง';
-                        errorMessage.style.display = 'block';
-                    }
-                } else {
-                    sessionStorage.setItem('loggedInUser', JSON.stringify({ username: username, role: role }));
-                    window.location.href = 'dashboard.html';
-                }
-            } else {
-                errorMessage.textContent = 'ข้อมูลไม่ถูกต้อง';
-                errorMessage.style.display = 'block';
+                alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
             }
         });
     }
 
-    // --- ส่วนการจัดการ Dashboard ---
+    // --- Dashboard Logic ---
     const mainContainer = document.querySelector('.container');
     const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
     const logoutBtn = document.getElementById('logout-btn');
@@ -134,19 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const role = loggedInUser.role;
 
         if (myDutiesBtn) {
-            if (['admin', 'vice_admin', 'secretary', 'user', 'student_council', 'student'].includes(role)) {
-                myDutiesBtn.style.display = 'inline-block';
-            } else {
-                myDutiesBtn.style.display = 'none';
-            }
+            myDutiesBtn.style.display = ['admin', 'vice_admin', 'secretary', 'user', 'student_council', 'student'].includes(role) ? 'inline-block' : 'none';
         }
         
         if (switchViewBtn) {
-            if (['admin', 'vice_admin', 'secretary'].includes(role)) {
-                switchViewBtn.style.display = 'inline-block';
-            } else {
-                switchViewBtn.style.display = 'none';
-            }
+            switchViewBtn.style.display = ['admin', 'vice_admin', 'secretary'].includes(role) ? 'inline-block' : 'none';
         }
         
         if (['admin', 'vice_admin', 'secretary'].includes(role)) {
@@ -165,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listeners สำหรับปุ่มใหม่
     let isUserView = false;
     let isDutiesView = false;
 
@@ -202,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // ฟังก์ชันสำหรับสร้างหน้า Admin
-    function renderAdminView() {
+    async function renderAdminView() {
         mainContainer.innerHTML = `
             <div class="dashboard-content admin-view">
                 <h2>รายงานและปัญหาทั้งหมด</h2>
@@ -211,7 +191,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button id="show-duties-assignment-btn" class="btn-secondary">มอบหมายหน้าที่</button>
                 </div>
                 <div id="admin-content-view">
-                    </div>
+                    <!-- เนื้อหาจะถูกสลับเข้ามาตรงนี้ -->
+                </div>
             </div>
         `;
 
@@ -219,10 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const showDutiesAssignmentBtn = document.getElementById('show-duties-assignment-btn');
         const adminContentView = document.getElementById('admin-content-view');
 
-        // แสดงหน้าดูรายงานเป็นค่าเริ่มต้น
         renderReportsTable(adminContentView);
 
-        // Event listeners สำหรับปุ่ม Admin view
         showReportsBtn.addEventListener('click', () => {
             renderReportsTable(adminContentView);
         });
@@ -232,8 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ฟังก์ชันสำหรับสร้างตารางรายงาน
-    function renderReportsTable(container) {
+    async function renderReportsTable(container) {
+        const reports = await getReports();
         container.innerHTML = `
             <table class="report-table">
                 <thead>
@@ -246,26 +225,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tr>
                 </thead>
                 <tbody>
-                    </tbody>
+                    ${reports.map(report => `
+                        <tr>
+                            <td>${report.username}</td>
+                            <td>${report.type}</td>
+                            <td>${report.title}</td>
+                            <td>${report.description}</td>
+                            <td>${report.image ? `<img src="${report.image}" alt="รูปภาพประกอบ">` : 'ไม่มี'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
             </table>
         `;
-        const tableBody = container.querySelector('.report-table tbody');
-        reports.forEach(report => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${report.username}</td>
-                <td>${report.type}</td>
-                <td>${report.title}</td>
-                <td>${report.description}</td>
-                <td>${report.image ? `<img src="${report.image}" alt="รูปภาพประกอบ">` : 'ไม่มี'}</td>
-            `;
-            tableBody.appendChild(row);
-        });
     }
 
-    // ฟังก์ชันสำหรับสร้างหน้ามอบหมายหน้าที่
-    function renderAdminDutiesAssignment(container) {
-        // สร้างตัวเลือกผู้ใช้ทั้งหมด (รวมนักเรียน)
+    async function renderAdminDutiesAssignment(container) {
+        const dutiesData = await getDuties();
         const allUsernames = Object.keys(allUsers);
         const userOptions = allUsernames.map(username => 
             `<option value="${username}">${username} (${allUsers[username].role})</option>`
@@ -291,30 +266,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="assign-duties-status" class="status-message"></div>
                 
                 <h3>หน้าที่ที่มอบหมายแล้ว</h3>
-                <ul id="current-duties-list"></ul>
+                <ul id="current-duties-list">
+                    ${Object.keys(dutiesData).map(user => `
+                        <li><strong>${user}:</strong> ${dutiesData[user].tasks.join(', ')}</li>
+                    `).join('')}
+                </ul>
             </div>
         `;
         
         const form = document.getElementById('assign-duties-form');
         const statusMessage = document.getElementById('assign-duties-status');
-        const currentDutiesList = document.getElementById('current-duties-list');
 
-        // แสดงหน้าที่ที่มอบหมายอยู่
-        for (const user in dutiesData) {
-            const dutyItem = document.createElement('li');
-            dutyItem.innerHTML = `<strong>${user}:</strong> ${dutiesData[user].tasks.join(', ')}`;
-            currentDutiesList.appendChild(dutyItem);
-        }
-
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const selectedUser = document.getElementById('assign-user').value;
             const dutiesText = document.getElementById('assign-duties-list').value;
             const newDuties = dutiesText.split(',').map(item => item.trim()).filter(item => item !== '');
 
             if (selectedUser && newDuties.length > 0) {
-                dutiesData[selectedUser] = { tasks: newDuties };
-                localStorage.setItem('duties', JSON.stringify(dutiesData));
+                const updatedDuties = { ...dutiesData, [selectedUser]: { tasks: newDuties } };
+                await saveDuties(updatedDuties);
                 statusMessage.textContent = `มอบหมายหน้าที่ให้ ${selectedUser} เรียบร้อยแล้ว!`;
                 statusMessage.style.color = 'green';
                 form.reset();
@@ -326,9 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ฟังก์ชันสำหรับสร้างหน้าดูหน้าที่
-    function renderDutiesView() {
+    async function renderDutiesView() {
         const username = loggedInUser.username;
+        const dutiesData = await getDuties();
         let userDuties;
         if (loggedInUser.role === 'student') {
             userDuties = dutiesData[username] || defaultStudentDuties;
@@ -350,7 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ฟังก์ชันสำหรับสร้างหน้า User
     function renderUserView() {
         const userRole = loggedInUser.role;
         let formTitle = `ส่งรายงาน/แจ้งปัญหา`;
@@ -404,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         const reportForm = document.getElementById('report-form');
-        reportForm.addEventListener('submit', (e) => {
+        reportForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const fileInput = document.getElementById('report-image');
@@ -413,19 +383,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     imageUrl = event.target.result;
-                    saveReport(imageUrl);
+                    await submitNewReport(imageUrl);
                 };
                 reader.readAsDataURL(file);
             } else {
-                saveReport('');
+                await submitNewReport('');
             }
         });
     }
 
-    // ฟังก์ชันสำหรับบันทึกรายงาน
-    function saveReport(imageUrl) {
+    async function submitNewReport(imageUrl) {
         const type = document.getElementById('report-type').value;
         const title = document.getElementById('report-title').value;
         const description = document.getElementById('report-description').value;
@@ -437,10 +406,8 @@ document.addEventListener('DOMContentLoaded', () => {
             image: imageUrl,
             timestamp: new Date().toLocaleString()
         };
-        reports.push(newReport);
-        localStorage.setItem('reports', JSON.stringify(reports));
+        await saveReport(newReport);
         alert('ส่งข้อมูลเรียบร้อยแล้ว!');
         document.getElementById('report-form').reset();
     }
 });
-
